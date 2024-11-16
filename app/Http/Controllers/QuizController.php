@@ -46,8 +46,48 @@ class QuizController extends Controller
         return response()->json(['quiz_completed' => false, 'question' => $question]);
     }
 
-    // Step 4: Submit Answer
     public function submitAnswer(Request $request)
+{
+    $userId = session('user_id');
+    $questionId = $request->question_id;
+    $skipped = $request->skipped ?? false; // Check if the question was skipped
+    $answerId = $request->answer;
+
+    if ($skipped) {
+        // Mark as skipped and don't check if the answer is correct
+        Result::create([
+            'user_id' => $userId,
+            'question_id' => $questionId,
+            'skipped' => true,  // Mark as skipped
+        ]);
+    } else {
+        // Check if the answer is correct
+        $isCorrect = Answer::where('question_id', $questionId)
+                   ->where('id', $answerId)
+                   ->where('is_correct', 1) 
+                   ->value('is_correct');
+
+        if ($isCorrect === null) {
+            $isCorrect = false;
+        }
+
+        Result::create([
+            'user_id' => $userId,
+            'question_id' => $questionId,
+            'answer_id' => $answerId,
+            'is_correct' => $isCorrect,
+        ]);
+    }
+
+    // Increment current index
+    session(['current_index' => session('current_index') + 1]);
+
+    return response()->json(['success' => true]);
+}
+
+
+    // Step 4: Submit Answer
+    public function submitAnswerOLD(Request $request)
     {
         $userId = session('user_id');
         $questionId = $request->question_id;
@@ -78,9 +118,14 @@ class QuizController extends Controller
     // Step 5: Show Results
     public function results($userId)
     {
-        $results = Result::where('user_id', $userId)
-            ->selectRaw('SUM(is_correct) as correct, COUNT(*) - SUM(is_correct) as wrong')
-            ->first();
+        
+            $results = Result::where('user_id', $userId)
+                ->selectRaw('
+                    SUM(is_correct) as correct, 
+                    COUNT(*) - SUM(is_correct) as wrong,
+                    SUM(skipped) as skipped
+                ')
+                ->first();
 
         return view('quiz.results', compact('results'));
     }

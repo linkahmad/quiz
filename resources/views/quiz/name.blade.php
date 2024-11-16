@@ -63,8 +63,9 @@
                                     </div>
                                 `).join('')}
                                 <input type="hidden" name="question_id" value="${question.id}">
-                                <button type="submit">Submit Answer</button>
+                                <button type="submit">Next</button>
                             </form>
+                            <button id="skipButton">Skip Question</button>
                         `);
                     },
                 });
@@ -85,6 +86,24 @@
                     },
                 });
             });
+            $(document).on('click', '#skipButton', function () {
+                    const questionId = $('input[name="question_id"]').val();
+                    const formData = {
+                        question_id: questionId,
+                        skipped: true,
+                    };
+
+                    $.ajax({
+                        url: '/submit-answer',
+                        type: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrfToken },
+                        data: formData,
+                        success: function () {
+                            loadQuestion();
+                        },
+                    });
+        });
+
         });
     </script>
 </body>
